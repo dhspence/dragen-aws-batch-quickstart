@@ -1,6 +1,6 @@
 # quickstart-illumina-dragen
-## DRAGEN on the AWS Cloud
 
+## DRAGEN on the AWS Cloud
 
 This Quick Start deploys Dynamic Read Analysis for GENomics Complete Suite (DRAGEN CS), a data analysis platform by Illumina, on the AWS Cloud in about 15 minutes.
 
@@ -17,8 +17,8 @@ You can also use the AWS CloudFormation templates as a starting point for your o
 
 ![Quick Start architecture for DRAGEN on AWS](https://d0.awsstatic.com/partner-network/QuickStart/datasheets/quickstart-architecture-for-dragen-on-aws.png)
 
-For architectural details, best practices, step-by-step instructions, and customization options, see the 
+For architectural details, best practices, step-by-step instructions, and customization options, see the
 [deployment guide](https://fwd.aws/YqKNQ).
 
 To post feedback, submit feature ideas, or report bugs, use the **Issues** section of this GitHub repo.
-If you'd like to submit code for this Quick Start, please review the [AWS Quick Start Contributor's Kit](https://aws-quickstart.github.io/). 
+If you'd like to submit code for this Quick Start, please review the [AWS Quick Start Contributor's Kit](https://aws-quickstart.github.io/).

@@ -1,5 +1,6 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: This CloudFormation Template removes an Elastic Container Registery Repository.
+Description:
+  This CloudFormation Template removes an Elastic Container Registery Repository.
   (qs-1nlegmi13)
 Metadata:
   cfn-lint: { config: { ignore_checks: [W9006, W9002, W9003] } }
@@ -75,4 +76,3 @@ Resources:
               status = cfnresponse.FAILED
             finally:
               cfnresponse.send(event, context, status, {}, new_physical_id)
-

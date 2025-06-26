@@ -1,6 +1,7 @@
 ---
 AWSTemplateFormatVersion: 2010-09-09
-Description: This CloudFormation Template creates the ECR Repository and Artifact
+Description:
+  This CloudFormation Template creates the ECR Repository and Artifact
   Bucket for the Docker Pipeline. (qs-1s1cul5im)
 Metadata:
   cfn-lint: { config: { ignore_checks: [W9006, W9002, W9003, W3011] } }
