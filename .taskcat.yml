@@ -24,7 +24,7 @@ tests:
       PublicSubnet2CIDR: 10.150.16.0/20
       QSS3BucketName: $[taskcat_autobucket]
       QSS3BucketRegion: $[taskcat_current_region]
-      QSS3KeyPrefix: github-illumina-dragen-aws-batch-quickstart/
+      QSS3KeyPrefix: dragen-aws-batch-quickstart/
       RetryNumber: "1"
       VPCCIDR: 10.150.0.0/16
     regions:

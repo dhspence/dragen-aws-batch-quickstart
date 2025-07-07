@@ -118,7 +118,7 @@ Parameters:
       It cannot start or end with a hyphen (-).
     Type: String
   QSS3BucketRegion:
-    Default: "us-east-1"
+    Default: us-east-1
     Description: "The AWS Region where the Quick Start S3 bucket (QSS3BucketName) is hosted. When using your own bucket, you must specify this value."
     Type: String
   QSS3KeyPrefix:
@@ -130,7 +130,7 @@ Parameters:
       S3 key prefix for the Quick Start assets. Quick Start key prefix
       can include numbers, lowercase letters, uppercase letters, hyphens (-), and
       forward slash (/).
-    Default: github-illumina-dragen-aws-batch-quickstart/
+    Default: dragen-aws-batch-quickstart/
     Type: String
   KeyPairName:
     Description:
@@ -159,6 +159,7 @@ Parameters:
     AllowedPattern: ^(0|[1-9][0-9]{0,2}|1000)$
     ConstraintDescription: Valid between 0 and 1000, inclusive
     Description: Maximum vCPUs for your AWS Batch Compute Environment
+    Default: 128
     Type: String
   DesiredvCpus:
     AllowedPattern: ^(0|[1-9][0-9]{0,2}|1000)$
@@ -173,7 +174,7 @@ Parameters:
       letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen
       (-).
     Description: S3 bucket name for the bucket to which you'll read and write genomics data.
-    Default: dragen-work-directory
+    Default: cgl-dragen-results
     Type: String
 
 Rules:
@@ -208,37 +209,16 @@ Rules:
           in specified AWS Regions. Please launch the stack in one of these
           regions to continue.
 
-Conditions:
-  UsingDefaultBucket: !Equals [!Ref QSS3BucketName, "dragen-aws-quickstart"]
-
 Resources:
   DockerBucketRepository:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub
-        - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/docker-bucket-repository.template.yaml
-        - S3Region:
-            !If [UsingDefaultBucket, !Ref "AWS::Region", !Ref QSS3BucketRegion]
-          S3Bucket:
-            !If [
-              UsingDefaultBucket,
-              !Sub "${QSS3BucketName}-${AWS::Region}",
-              !Ref QSS3BucketName,
-            ]
+      TemplateURL: !Sub "https://${QSS3BucketName}.s3.${QSS3BucketRegion}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/docker-bucket-repository.template.yaml"
 
   CopyFiles:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub
-        - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/copy.template.yaml
-        - S3Region:
-            !If [UsingDefaultBucket, !Ref "AWS::Region", !Ref QSS3BucketRegion]
-          S3Bucket:
-            !If [
-              UsingDefaultBucket,
-              !Sub "${QSS3BucketName}-${AWS::Region}",
-              !Ref QSS3BucketName,
-            ]
+      TemplateURL: !Sub "https://${QSS3BucketName}.s3.${QSS3BucketRegion}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/copy.template.yaml"
       Parameters:
         QSS3BucketName: !Ref QSS3BucketName
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
@@ -252,16 +232,7 @@ Resources:
     DependsOn:
       - CopyFiles
     Properties:
-      TemplateURL: !Sub
-        - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/container-build.template.yaml
-        - S3Region:
-            !If [UsingDefaultBucket, !Ref "AWS::Region", !Ref QSS3BucketRegion]
-          S3Bucket:
-            !If [
-              UsingDefaultBucket,
-              !Sub "${QSS3BucketName}-${AWS::Region}",
-              !Ref QSS3BucketName,
-            ]
+      TemplateURL: !Sub "https://${QSS3BucketName}.s3.${QSS3BucketRegion}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/container-build.template.yaml"
       Parameters:
         ArtifactBucket: !GetAtt DockerBucketRepository.Outputs.ArtifactBucket
         ArtifactKey: !Ref QSS3KeyPrefix
@@ -285,16 +256,7 @@ Resources:
       - ContainerBuild
       - WaitConditionContainerBuild
     Properties:
-      TemplateURL: !Sub
-        - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/batch.template.yaml
-        - S3Region:
-            !If [UsingDefaultBucket, !Ref "AWS::Region", !Ref QSS3BucketRegion]
-          S3Bucket:
-            !If [
-              UsingDefaultBucket,
-              !Sub "${QSS3BucketName}-${AWS::Region}",
-              !Ref QSS3BucketName,
-            ]
+      TemplateURL: !Sub "https://${QSS3BucketName}.s3.${QSS3BucketRegion}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/batch.template.yaml"
       Parameters:
         GenomicsS3Bucket: !Ref GenomicsS3Bucket
         DragenDockerImage: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${DockerBucketRepository.Outputs.Repository}:dragen
@@ -542,16 +504,7 @@ Resources:
   ContainerCleanup:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub
-        - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/clean-bucket-repository.template.yaml
-        - S3Region:
-            !If [UsingDefaultBucket, !Ref "AWS::Region", !Ref QSS3BucketRegion]
-          S3Bucket:
-            !If [
-              UsingDefaultBucket,
-              !Sub "${QSS3BucketName}-${AWS::Region}",
-              !Ref QSS3BucketName,
-            ]
+      TemplateURL: !Sub "https://${QSS3BucketName}.s3.${QSS3BucketRegion}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/clean-bucket-repository.template.yaml"
       Parameters:
         Bucket: !GetAtt DockerBucketRepository.Outputs.ArtifactBucket
         Repository: !GetAtt DockerBucketRepository.Outputs.Repository
