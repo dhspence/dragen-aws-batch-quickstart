@@ -1,5 +1,6 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: This CloudFormation Template removes non-versioned files from an S3 Bucket.
+Description:
+  This CloudFormation Template removes non-versioned files from an S3 Bucket.
   (qs-1nlegmi0o)
 Metadata:
   cfn-lint: { config: { ignore_checks: [W9006, W9002, W9003] } }
@@ -87,4 +88,3 @@ Resources:
               status = cfnresponse.FAILED
             finally:
               cfnresponse.send(event, context, status, {}, new_physical_id)
-

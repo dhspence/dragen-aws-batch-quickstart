@@ -14,32 +14,36 @@ Metadata:
     Order: "1"
   AWS::CloudFormation::Interface:
     ParameterGroups:
-    - Label:
-        default: Network Configuration
-      Parameters:
-      - AvailabilityZones
-      - VPCCIDR
-      - PrivateSubnet1CIDR
-      - PrivateSubnet2CIDR
-      - PublicSubnet1CIDR
-      - PublicSubnet2CIDR
-    - Label:
-        default: DRAGEN Quick Start Configuration
-      Parameters:
-      - KeyPairName
-      - InstanceType
-      - BidPercentage
-      - MinvCpus
-      - MaxvCpus
-      - DesiredvCpus
-      - GenomicsS3Bucket
-      - RetryNumber
-    - Label:
-        default: AWS Quick Start Configuration
-      Parameters:
-      - QSS3BucketName
-      - QSS3BucketRegion
-      - QSS3KeyPrefix
+      - Label:
+          default: Network Configuration
+        Parameters:
+          - AvailabilityZones
+          - VPCCIDR
+          - PrivateSubnet1CIDR
+          - PrivateSubnet2CIDR
+          - PublicSubnet1CIDR
+          - PublicSubnet2CIDR
+          - PublicSubnet3CIDR
+          - PublicSubnet4CIDR
+          - PublicSubnet5CIDR
+          - PublicSubnet6CIDR
+      - Label:
+          default: DRAGEN Quick Start Configuration
+        Parameters:
+          - KeyPairName
+          - InstanceType
+          - BidPercentage
+          - MinvCpus
+          - MaxvCpus
+          - DesiredvCpus
+          - GenomicsS3Bucket
+          - RetryNumber
+      - Label:
+          default: AWS Quick Start Configuration
+        Parameters:
+          - QSS3BucketName
+          - QSS3BucketRegion
+          - QSS3KeyPrefix
     ParameterLabels:
       AvailabilityZones:
         default: Availability Zones
@@ -53,6 +57,14 @@ Metadata:
         default: Public Subnet 1 CIDR
       PublicSubnet2CIDR:
         default: Public Subnet 2 CIDR
+      PublicSubnet3CIDR:
+        default: Public Subnet 3 CIDR
+      PublicSubnet4CIDR:
+        default: Public Subnet 4 CIDR
+      PublicSubnet5CIDR:
+        default: Public Subnet 5 CIDR
+      PublicSubnet6CIDR:
+        default: Public Subnet 6 CIDR
       VPCCIDR:
         default: VPC CIDR
       QSS3BucketRegion:
@@ -78,73 +90,102 @@ Metadata:
 
 Parameters:
   AvailabilityZones:
-    Description: The list of Availability Zones to use for the subnets in the VPC.
+    Description:
+      The list of Availability Zones to use for the subnets in the VPC.
       The Quick Start uses two Availability Zones from your list and preserves the logical order you specify.
     Type: List<AWS::EC2::AvailabilityZone::Name>
   InstanceType:
     AllowedValues:
-    - f1.2xlarge
-    - f1.4xlarge
-    - f1.16xlarge
-    Default: f1.4xlarge
+      - f2.6xlarge
+      - f2.12xlarge
+    Default: f2.6xlarge
     Description: Amazon EC2 instance type for DRAGEN in the AWS Batch Compute Environment.
     Type: String
   KeyPairName:
-    Description: The name of an existing public/private key pair, which allows you
+    Description:
+      The name of an existing public/private key pair, which allows you
       to securely connect to your instance after it launches.
     Type: AWS::EC2::KeyPair::KeyName
   PrivateSubnet1CIDR:
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
     ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
-    Default: 10.0.0.0/19
+    Default: 172.31.128.0/20
     Description: The CIDR block for the private subnet located in Availability Zone 1.
     Type: String
   PrivateSubnet2CIDR:
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
     ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
-    Default: 10.0.32.0/19
+    Default: 172.31.160.0/20
     Description: The CIDR block for the private subnet located in Availability Zone 2.
     Type: String
   PublicSubnet1CIDR:
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
     ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
-    Default: 10.0.128.0/20
+    Default: 172.31.64.0/20
     Description: The CIDR block for the public (DMZ) subnet 1 located in Availability Zone 1.
     Type: String
   PublicSubnet2CIDR:
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
     ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
-    Default: 10.0.144.0/20
+    Default: 172.31.48.0/20
+    Description: The CIDR block for the public (DMZ) subnet 2 located in Availability Zone 2.
+    Type: String
+  PublicSubnet3CIDR:
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+    Default: 172.31.16.0/20
+    Description: The CIDR block for the public (DMZ) subnet 2 located in Availability Zone 2.
+    Type: String
+  PublicSubnet4CIDR:
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+    Default: 172.31.0.0/20
+    Description: The CIDR block for the public (DMZ) subnet 2 located in Availability Zone 2.
+    Type: String
+  PublicSubnet5CIDR:
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+    Default: 172.31.80.0/20
+    Description: The CIDR block for the public (DMZ) subnet 2 located in Availability Zone 2.
+    Type: String
+  PublicSubnet6CIDR:
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+    Default: 172.31.32.0/20
     Description: The CIDR block for the public (DMZ) subnet 2 located in Availability Zone 2.
     Type: String
   VPCCIDR:
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(1[6-9]|2[0-8]))$
     ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
-    Default: 10.0.0.0/16
+    Default: 172.31.0.0/16
     Description: The CIDR block for the VPC.
     Type: String
   QSS3BucketName:
     AllowedPattern: ^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$
-    ConstraintDescription: Quick Start bucket name can include numbers, lowercase
+    ConstraintDescription:
+      Quick Start bucket name can include numbers, lowercase
       letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen
       (-).
-    Default: aws-ia
-    Description: S3 bucket name for the Quick Start assets. Quick Start bucket name
+    Default: dragen-aws-quickstart
+    Description:
+      S3 bucket name for the Quick Start assets. Quick Start bucket name
       can include numbers, lowercase letters, uppercase letters, and hyphens (-).
       It cannot start or end with a hyphen (-).
     Type: String
   QSS3BucketRegion:
-    Default: 'us-east-1'
-    Description: 'The AWS Region where the Quick Start S3 bucket (QSS3BucketName) is hosted. When using your own bucket, you must specify this value.'
+    Default: us-east-1
+    Description: "The AWS Region where the Quick Start S3 bucket (QSS3BucketName) is hosted. When using your own bucket, you must specify this value."
     Type: String
   QSS3KeyPrefix:
     AllowedPattern: ^[0-9a-zA-Z-/]*$
-    ConstraintDescription: Quick Start key prefix can include numbers, lowercase letters,
+    ConstraintDescription:
+      Quick Start key prefix can include numbers, lowercase letters,
       uppercase letters, hyphens (-), and a forward slash (/) at the end of the prefix.
-    Description: S3 key prefix for the Quick Start assets. Quick Start key prefix
+    Description:
+      S3 key prefix for the Quick Start assets. Quick Start key prefix
       can include numbers, lowercase letters, uppercase letters, hyphens (-), and
       forward slash (/).
-    Default: cfn-ps-illumina-dragen/
+    Default: dragen-aws-batch-quickstart/
     Type: String
   BidPercentage:
     AllowedPattern: (?:\b|-)([1-9]{1,2}[0]?|100)\b
@@ -168,6 +209,7 @@ Parameters:
     AllowedPattern: ^([1-9][0-9]{0,2}|1000)$
     ConstraintDescription: Valid between 1 and 1000, inclusive
     Description: Maximum vCPUs for your AWS Batch Compute Environment.
+    Default: 128
     Type: String
   DesiredvCpus:
     AllowedPattern: ^(0|[1-9][0-9]{0,2}|1000)$
@@ -177,57 +219,54 @@ Parameters:
     Type: String
   GenomicsS3Bucket:
     AllowedPattern: ^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$
-    ConstraintDescription: S3 genomics bucket name can include numbers, lowercase
+    ConstraintDescription:
+      S3 genomics bucket name can include numbers, lowercase
       letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen
       (-).
-    Description: S3 bucket name for the bucket to which you'll read and write genomics data. 
+    Description: S3 bucket name for the bucket to which you'll read and write genomics data.
+    Default: cgl-dragen-results
     Type: String
 
 Rules:
   DRAGENSupportedRegionRule:
     Assertions:
-    - Assert:
-        Fn::Contains:
-        - - us-east-1
-          - us-west-2
-          - eu-central-1
-          - eu-west-1
-          - ap-southeast-2
-        - !Ref AWS::Region
-      AssertDescription: This Quick Start utilizes DRAGEN Marketplace AMI which is only available
-        in specified AWS Regions. Please launch the stack in one of these
-        regions to continue.
-
-Conditions:
-  UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'aws-ia']
+      - Assert:
+          Fn::Contains:
+            - - us-east-1
+              - us-west-2
+              - eu-central-1
+              - eu-west-1
+              - ap-southeast-2
+            - !Ref AWS::Region
+        AssertDescription:
+          This Quick Start utilizes DRAGEN Marketplace AMI which is only available
+          in specified AWS Regions. Please launch the stack in one of these
+          regions to continue.
 
 Resources:
   VPCStack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL:
-        Fn::Sub:
-          - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}submodules/cfn-ps-aws-vpc/templates/aws-vpc.template.yaml
-          - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
-            S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+      TemplateURL: !Sub "https://${QSS3BucketName}.s3.${QSS3BucketRegion}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/aws-vpc.template.yaml"
       Parameters:
         AvailabilityZones:
           Fn::Join:
-          - ','
-          - !Ref AvailabilityZones
-        NumberOfAZs: '2'
+            - ","
+            - !Ref AvailabilityZones
+        NumberOfAZs: "2"
         PrivateSubnet1ACIDR: !Ref PrivateSubnet1CIDR
         PrivateSubnet2ACIDR: !Ref PrivateSubnet2CIDR
         PublicSubnet1CIDR: !Ref PublicSubnet1CIDR
         PublicSubnet2CIDR: !Ref PublicSubnet2CIDR
+        PublicSubnet3CIDR: !Ref PublicSubnet3CIDR
+        PublicSubnet4CIDR: !Ref PublicSubnet4CIDR
+        PublicSubnet5CIDR: !Ref PublicSubnet5CIDR
+        PublicSubnet6CIDR: !Ref PublicSubnet6CIDR
         VPCCIDR: !Ref VPCCIDR
   DragenStack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub
-        - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/dragen.template.yaml
-        - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
-          S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
+      TemplateURL: !Sub "https://${QSS3BucketName}.s3.${QSS3BucketRegion}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/dragen.template.yaml"
       Parameters:
         PrivateSubnet1ID: !GetAtt VPCStack.Outputs.PrivateSubnet1AID
         PrivateSubnet2ID: !GetAtt VPCStack.Outputs.PrivateSubnet2AID

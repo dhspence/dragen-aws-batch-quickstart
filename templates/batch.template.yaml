@@ -7,23 +7,23 @@ Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
       - Label:
-          default: DRAGEN parameteres
+          default: DRAGEN parameters
         Parameters:
-        - GenomicsS3Bucket
-        - DragenDockerImage
+          - GenomicsS3Bucket
+          - DragenDockerImage
       - Label:
           default: AWS Batch Compute Environment Configuration
         Parameters:
-        - VpcId
-        - SubnetIds
-        - BidPercentage
-        - ImageId
-        - Ec2KeyPair
-        - MinvCpus
-        - MaxvCpus
-        - DesiredvCpus
-        - InstanceType
-        - RetryNumber
+          - VpcId
+          - SubnetIds
+          - BidPercentage
+          - ImageId
+          - Ec2KeyPair
+          - MinvCpus
+          - MaxvCpus
+          - DesiredvCpus
+          - InstanceType
+          - RetryNumber
     ParameterLabels:
       GenomicsS3Bucket:
         default: Genomics Data Bucket
@@ -49,15 +49,18 @@ Metadata:
         default: Max vCPUs
       DesiredvCpus:
         default: Desired vCPUs
-
+      DragenVersion:
+        default: Dragen Version
 
 Parameters:
   GenomicsS3Bucket:
     AllowedPattern: ^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$
-    ConstraintDescription: S3 genomics bucket name can include numbers, lowercase
+    ConstraintDescription:
+      S3 genomics bucket name can include numbers, lowercase
       letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen
       (-).
-    Description: S3 bucket name for the bucket to which you'll read and write genomics data. 
+    Description: S3 bucket name for the bucket to which you'll read and write genomics data.
+    Default: cgl-dragen-results
     Type: String
   DragenDockerImage:
     Type: String
@@ -92,38 +95,52 @@ Parameters:
   MaxvCpus:
     Type: String
     Description: Maximum number of CPUs in the compute environment. Should be >= than MinCpus
+    Default: 128
     AllowedPattern: "[0-9]+"
   RetryNumber:
     Type: String
-    Default: "1"
+    Default: "3"
     Description: Number of retries for each AWS Batch job. Integer required.
     MaxLength: 1
     AllowedPattern: (?:\b|-)([1-9]|10)\b
     ConstraintDescription: Value between 1 and 10
   InstanceType:
     AllowedValues:
-    - f1.2xlarge
-    - f1.4xlarge
-    - f1.16xlarge
+      - f2.6xlarge
+      - f2.12xlarge
     Description: Amazon EC2 instance type for DRAGEN in the AWS Batch Compute Environment.
     Type: String
+  DragenVersion:
+    Type: String
+    Default: "v4-3-6"
+    Description: Version of DRAGEN to use in the AWS Batch Compute Environment.
+    AllowedPattern: ^v[0-9]+-[0-9]+-[0-9]+$
+    ConstraintDescription: Version must be in the format vX-Y-Z, where X, Y, and Z are integers.
+  LibDragenSO:
+    Type: String
+    Default: "/usr/lib64/libdragen.so.4.3.6f"
+    Description: The name of the DRAGEN shared object file to be used in the AWS Batch Compute Environment.
+    ConstraintDescription: The shared object file is typically in the following path /usr/lib64/libdragen.so.X-Y-Z, where X, Y, and Z are integers.
 
 Conditions:
-  Is2xl: !Equals [!Ref InstanceType, 'f1.2xlarge']
-  Is4xl: !Equals [!Ref InstanceType, 'f1.4xlarge']
+  Is6xl: !Equals [!Ref InstanceType, "f2.6xlarge"]
+  Is12xl: !Equals [!Ref InstanceType, "f2.12xlarge"]
 
 Resources:
   # Batch Setup
   BatchSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Allow https
+      GroupDescription: Allow SSH and all outbound https
       VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 128.252.0.0/16
       SecurityGroupEgress:
-      - IpProtocol: tcp
-        FromPort: 443
-        ToPort: 443
-        CidrIp: 0.0.0.0/0
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
   BatchServiceRole:
     Type: AWS::IAM::Role
     Properties:
@@ -137,7 +154,7 @@ Resources:
             Action:
               - "sts:AssumeRole"
       ManagedPolicyArns:
-      - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSBatchServiceRole
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSBatchServiceRole
   SpotFleetRole:
     Type: AWS::IAM::Role
     Properties:
@@ -151,7 +168,7 @@ Resources:
             Action:
               - "sts:AssumeRole"
       ManagedPolicyArns:
-      - !Sub "arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonEC2SpotFleetTaggingRole"
+        - !Sub "arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonEC2SpotFleetTaggingRole"
   S3ReadWritePolicyInstance:
     Type: AWS::IAM::Policy
     Properties:
@@ -162,19 +179,19 @@ Resources:
           - Sid: S3ReadWritePolicyInstance
             Effect: Allow
             Action:
-            - "s3:GetBucketLocation"
-            - "s3:ListBucket"
-            - "s3:ListBucketVersions"
-            - "s3:GetObject"
-            - "s3:GetObjectVersion"
-            - "s3:PutObject"
-            - "s3:ListMultipartUploadParts"
-            - "s3:AbortMultipartUpload"
+              - "s3:GetBucketLocation"
+              - "s3:ListBucket"
+              - "s3:ListBucketVersions"
+              - "s3:GetObject"
+              - "s3:GetObjectVersion"
+              - "s3:PutObject"
+              - "s3:ListMultipartUploadParts"
+              - "s3:AbortMultipartUpload"
             Resource:
-            - !Sub "arn:${AWS::Partition}:s3:::${GenomicsS3Bucket}"
-            - !Sub "arn:${AWS::Partition}:s3:::${GenomicsS3Bucket}/*"
+              - !Sub "arn:${AWS::Partition}:s3:::${GenomicsS3Bucket}"
+              - !Sub "arn:${AWS::Partition}:s3:::${GenomicsS3Bucket}/*"
       Roles:
-      - !Ref DragenInstanceRole
+        - !Ref DragenInstanceRole
   S3ReadWritePolicyJob:
     Type: AWS::IAM::Policy
     Properties:
@@ -185,85 +202,100 @@ Resources:
           - Sid: S3ReadWritePolicyJob
             Effect: Allow
             Action:
-            - "s3:GetBucketLocation"
-            - "s3:ListBucket"
-            - "s3:ListBucketVersions"
-            - "s3:GetObject"
-            - "s3:GetObjectVersion"
-            - "s3:PutObject"
-            - "s3:ListMultipartUploadParts"
-            - "s3:AbortMultipartUpload"
+              - "s3:GetBucketLocation"
+              - "s3:ListBucket"
+              - "s3:ListBucketVersions"
+              - "s3:GetObject"
+              - "s3:GetObjectVersion"
+              - "s3:PutObject"
+              - "s3:ListMultipartUploadParts"
+              - "s3:AbortMultipartUpload"
             Resource:
-            - !Sub "arn:${AWS::Partition}:s3:::${GenomicsS3Bucket}"
-            - !Sub "arn:${AWS::Partition}:s3:::${GenomicsS3Bucket}/*"
+              - !Sub "arn:${AWS::Partition}:s3:::${GenomicsS3Bucket}"
+              - !Sub "arn:${AWS::Partition}:s3:::${GenomicsS3Bucket}/*"
       Roles:
-      - !Ref DragenJobRole
+        - !Ref DragenJobRole
   DragenLaunchTemplate:
     Type: AWS::EC2::LaunchTemplate
     Properties:
       LaunchTemplateData:
-        InstanceType: !Ref 'InstanceType'
-        ImageId: !Ref 'ImageId'
+        InstanceType: !Ref "InstanceType"
+        ImageId: !Ref "ImageId"
         SecurityGroupIds:
           - !Ref BatchSecurityGroup
         IamInstanceProfile:
-          Name: !Ref 'DragenInstanceProfile'
-        KeyName: !Ref 'Ec2KeyPair'
+          Name: !Ref "DragenInstanceProfile"
+        KeyName: !Ref "Ec2KeyPair"
         TagSpecifications:
-          -
-            ResourceType: 'instance'
+          - ResourceType: "instance"
             Tags:
               - Key: "Name"
                 Value: "Dragen"
         UserData: !Base64
           Fn::Sub: |
-              Content-Type: multipart/mixed; boundary="==BOUNDARY=="
-              MIME-Version: 1.0
+            Content-Type: multipart/mixed; boundary="==BOUNDARY=="
+            MIME-Version: 1.0
 
-              --==BOUNDARY==
-              MIME-Version: 1.0
-              Content-Type: text/x-shellscript; charset="us-ascii"
+            --==BOUNDARY==
+            MIME-Version: 1.0
+            Content-Type: text/x-shellscript; charset="us-ascii"
 
-              #!/bin/bash
+            #!/bin/bash
 
-              function qs_retry_command() {
-                  local -r __tries="$1"; shift
-                  local -r __run="$@"
-                  local -i __backoff_delay=2
+            function qs_retry_command() {
+                local -r __tries="$1"; shift
+                local -r __run="$@"
+                local -i __backoff_delay=2
 
-                  until $__run
-                      do
-                              if (( __current_try == __tries ))
-                              then
-                                      echo "Tried $__current_try times and failed!"
-                                      return 1
-                              else
-                                      echo "Retrying ...."
-                                      sleep $((((__backoff_delay++)) + ((__current_try++))))
-                              fi
-                      done
+                until $__run
+                    do
+                            if (( __current_try == __tries ))
+                            then
+                                    echo "Tried $__current_try times and failed!"
+                                    return 1
+                            else
+                                    echo "Retrying ...."
+                                    sleep $((((__backoff_delay++)) + ((__current_try++))))
+                            fi
+                    done
 
-              }
+            }
 
-              echo ECS_DISABLE_IMAGE_CLEANUP=false>>/etc/ecs/ecs.config
-              echo ECS_ENGINE_TASK_CLEANUP_WAIT_DURATION=2m>>/etc/ecs/ecs.config
-              echo ECS_IMAGE_CLEANUP_INTERVAL=10m>>/etc/ecs/ecs.config
-              echo ECS_IMAGE_MINIMUM_CLEANUP_AGE=10m>>/etc/ecs/ecs.config
-              echo ECS_NUM_IMAGES_DELETE_PER_CYCLE=5>>/etc/ecs/ecs.config
-              echo ECS_RESERVED_MEMORY=32>>/etc/ecs/ecs.config
-              echo ECS_AVAILABLE_LOGGING_DRIVERS='["json-file","awslogs"]'>>/etc/ecs/ecs.config
-              qs_retry_command 10 yum downgrade -y docker-ce-25.0.5-1.el8 docker-ce-cli-25.0.5-1.el8 docker-ce-rootless-extras-25.0.5-1.el8
-              qs_retry_command 10 systemctl restart docker
-              qs_retry_command 10 docker stop ecs-agent
-              qs_retry_command 10 docker rm ecs-agent
-              qs_retry_command 10 docker pull amazon/amazon-ecs-agent:latest
-              qs_retry_command 10 docker run --name ecs-agent --detach=true --restart=on-failure:10 --volume=/var/run:/var/run --volume=/var/log/ecs/:/log --volume=/var/lib/ecs/data:/data --volume=/etc/ecs:/etc/ecs --net=host --env-file=/etc/ecs/ecs.config amazon/amazon-ecs-agent:latest
+            echo ECS_DISABLE_IMAGE_CLEANUP=false >> /etc/ecs/ecs.config
+            echo ECS_ENGINE_TASK_CLEANUP_WAIT_DURATION=2m >> /etc/ecs/ecs.config
+            echo ECS_IMAGE_CLEANUP_INTERVAL=10m >> /etc/ecs/ecs.config
+            echo ECS_IMAGE_MINIMUM_CLEANUP_AGE=10m >> /etc/ecs/ecs.config
+            echo ECS_NUM_IMAGES_DELETE_PER_CYCLE=5 >> /etc/ecs/ecs.config
+            echo ECS_RESERVED_MEMORY=32 >> /etc/ecs/ecs.config
+            echo ECS_AVAILABLE_LOGGING_DRIVERS='["json-file","awslogs"]' >> /etc/ecs/ecs.config
 
-              --==BOUNDARY==--
+            qs_retry_command 10 yum downgrade -y \
+                docker-ce-25.0.5-1.el8 \
+                docker-ce-cli-25.0.5-1.el8 \
+                docker-ce-rootless-extras-25.0.5-1.el8
+
+            qs_retry_command 10 systemctl restart docker
+            qs_retry_command 10 docker stop ecs-agent
+            qs_retry_command 10 docker rm ecs-agent
+            qs_retry_command 10 docker pull amazon/amazon-ecs-agent:latest
+
+            qs_retry_command 10 docker run \
+                --name ecs-agent \
+                --detach=true \
+                --restart=on-failure:10 \
+                --volume=/var/run:/var/run \
+                --volume=/var/log/ecs/:/log \
+                --volume=/var/lib/ecs/data:/data \
+                --volume=/etc/ecs:/etc/ecs \
+                --net=host \
+                --env-file=/etc/ecs/ecs.config \
+                amazon/amazon-ecs-agent:latest
+
+            --==BOUNDARY==--
   DragenComputeEnvironmentSpot:
     Type: AWS::Batch::ComputeEnvironment
     Properties:
-      ComputeEnvironmentName: dragen-spot
+      ComputeEnvironmentName: !Sub "dragen-spot_${DragenVersion}"
       ServiceRole: !Ref BatchServiceRole
       Type: MANAGED
       State: ENABLED
@@ -277,7 +309,7 @@ Resources:
         DesiredvCpus: !Ref DesiredvCpus
         MaxvCpus: !Ref MaxvCpus
         SecurityGroupIds:
-        - !Ref BatchSecurityGroup
+          - !Ref BatchSecurityGroup
         SpotIamFleetRole: !Ref SpotFleetRole
         Subnets: !Ref SubnetIds
         Type: SPOT
@@ -286,7 +318,7 @@ Resources:
   DragenComputeEnvironmentOnDemand:
     Type: AWS::Batch::ComputeEnvironment
     Properties:
-      ComputeEnvironmentName: dragen-ondemand
+      ComputeEnvironmentName: !Sub "dragen_${DragenVersion}"
       ServiceRole: !Ref BatchServiceRole
       Type: MANAGED
       State: ENABLED
@@ -299,9 +331,10 @@ Resources:
         DesiredvCpus: !Ref DesiredvCpus
         MaxvCpus: !Ref MaxvCpus
         SecurityGroupIds:
-        - !Ref BatchSecurityGroup
+          - !Ref BatchSecurityGroup
         Subnets: !Ref SubnetIds
         Type: EC2
+        AllocationStrategy: BEST_FIT_PROGRESSIVE
         LaunchTemplate:
           LaunchTemplateId: !Ref DragenLaunchTemplate
 
@@ -331,18 +364,18 @@ Resources:
             Action:
               - "sts:AssumeRole"
       ManagedPolicyArns:
-      - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role
   DragenInstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
       Roles:
-      - !Ref DragenInstanceRole
+        - !Ref DragenInstanceRole
       InstanceProfileName: !Ref DragenInstanceRole
   DragenJobQueue:
     Type: AWS::Batch::JobQueue
     Properties:
-      JobQueueName: dragen-queue
-      Priority: 100
+      JobQueueName: !Sub "dragen-queue_${DragenVersion}"
+      Priority: 1
       State: ENABLED
       ComputeEnvironmentOrder:
         - Order: 1
@@ -352,15 +385,16 @@ Resources:
   DragenJobDefinition:
     Type: AWS::Batch::JobDefinition
     Properties:
-      JobDefinitionName: dragen
+      JobDefinitionName: !Sub "dragen_${DragenVersion}"
       Type: container
       RetryStrategy:
         Attempts: !Ref RetryNumber
       ContainerProperties:
         Image: !Ref DragenDockerImage
-        Vcpus: !If [Is2xl, 8, !If [Is4xl, 16, 64]]
-        Memory: !If [Is2xl, 120000, !If [Is4xl, 240000, 800000]]
+        Vcpus: !If [Is6xl, 24, !If [Is12xl, 48, 48]]
+        Memory: !If [Is6xl, 256000, !If [Is12xl, 512000, 512000]]
         JobRoleArn: !GetAtt DragenJobRole.Arn
+        Privileged: true
         MountPoints:
           - ContainerPath: "/scratch"
             ReadOnly: False
@@ -374,9 +408,15 @@ Resources:
           - ContainerPath: "/var/lib/edico"
             ReadOnly: False
             SourceVolume: docker_var_lib_edico
-          - ContainerPath: "/usr/lib64/libdragen.so.4.3.6"
+          - ContainerPath: !Ref LibDragenSO
             ReadOnly: False
             SourceVolume: docker_usr_lib64
+          - ContainerPath: "/staging"
+            ReadOnly: False
+            SourceVolume: docker_staging
+          - ContainerPath: "/var/log"
+            ReadOnly: False
+            SourceVolume: docker_var_log
         Volumes:
           - Name: docker_scratch
             Host:
@@ -392,7 +432,13 @@ Resources:
               SourcePath: "/var/lib/edico"
           - Name: docker_usr_lib64
             Host:
-              SourcePath: "/usr/lib64/libdragen.so.4.3.6"
+              SourcePath: !Ref LibDragenSO
+          - Name: docker_staging
+            Host:
+              SourcePath: "/staging"
+          - Name: docker_var_log
+            Host:
+              SourcePath: "/var/log"
 
 Outputs:
   DragenComputeEnvironmentSpot:
