@@ -1,24 +1,127 @@
-# quickstart-illumina-dragen
+# Quick Start Guide: Illumina DRAGEN on AWS Batch
 
-## DRAGEN on the AWS Cloud
+## Table of Contents
 
-This Quick Start deploys Dynamic Read Analysis for GENomics Complete Suite (DRAGEN CS), a data analysis platform by Illumina, on the AWS Cloud in about 15 minutes.
+- [Overview](#overview)
+- [Configuration Guidelines](#configuration-guidelines)
+  - [VPC Setup](#vpc-setup)
+  - [Batch Environment Setup](#batch-environment-setup)
+  - [Deploy with New VPC](#deploy-with-new-vpc)
+  - [Deploy with Existing VPC](#deploy-with-existing-vpc)
+- [Stack Deployment Instructions](#stack-deployment-instructions)
+- [Post-Deployment Steps](#post-deployment-steps)
+- [Using DRAGEN with Nextflow](#using-dragen-with-nextflow)
 
-DRAGEN CS enables ultra-rapid analysis of next-generation sequencing (NGS) data, significantly reduces the time required to analyze genomic data, and improves accuracy. It includes bioinformatics pipelines that provide highly optimized algorithms for mapping, aligning, sorting, duplicate marking, and haplotype variant calling. These pipelines include DRAGEN Germline V2, DRAGEN Somatic V2 (Tumor and Tumor/Normal), DRAGEN Virtual Long Read Detection (VLRD), DRAGEN RNA Gene Fusion, DRAGEN Joint Genotyping, and GATK Best Practices.
+## Overview
 
-The Quick Start builds an AWS environment that spans two Availability Zones for high availability, and provisions two AWS Batch compute environments for Spot Instances and On-Demand Instances. These environments include DRAGEN F1 instances that are connected to field-programmable gate arrays (FPGAs) for hardware acceleration.
+This guide explains how to deploy the Illumina DRAGEN (Dynamic Read Analysis for GENomics) platform on AWS Batch. DRAGEN provides lightning-fast, accurate analysis of next-generation sequencing (NGS) data using purpose-built hardware acceleration.
 
-The Quick Start offers two deployment options:
+### Key Features
 
-- Deploying DRAGEN into a new virtual private cloud (VPC) on AWS
-- Deploying DRAGEN into an existing VPC on AWS
+- High-performance DRAGEN environment hosted on AWS Batch
+- Supports deployment in a **new** or **existing** AWS VPC
 
-You can also use the AWS CloudFormation templates as a starting point for your own implementation.
+## Configuration Guidelines
 
-![Quick Start architecture for DRAGEN on AWS](https://d0.awsstatic.com/partner-network/QuickStart/datasheets/quickstart-architecture-for-dragen-on-aws.png)
+These options represent baseline recommendations and should be tailored to suit your deployment strategy.
 
-For architectural details, best practices, step-by-step instructions, and customization options, see the
-[deployment guide](https://fwd.aws/YqKNQ).
+### VPC Setup
 
-To post feedback, submit feature ideas, or report bugs, use the **Issues** section of this GitHub repo.
-If you'd like to submit code for this Quick Start, please review the [AWS Quick Start Contributor's Kit](https://aws-quickstart.github.io/).
+In `aws-vpc.template.yaml`, define CIDR values and subnet tags:
+
+- Configure default public and private subnets
+- To add more subnets, include parameters like:
+  - `PublicSubnet<number>CIDR`
+  - `PublicSubnetTag<number>`
+
+### Batch Environment Setup
+
+In `batch.template.yaml`, define these parameters:
+
+- `GenomicsS3Bucket`: S3 bucket for genomic data storage
+- `MaxvCpus`: Maximum vCPUs for compute environment
+- `RetryNumber`: Retry count per AWS Batch job
+- `DragenVersion`: DRAGEN software version
+- `LibDragenSO`: Path to the DRAGEN shared object (`.so`) file
+
+### Deploy with New VPC
+
+In `dragen-main.template.yaml`, set values for:
+
+- VPC CIDR block
+- Public and private subnets
+- Additional subnets as needed (e.g., `PublicSubnet2CIDR`)
+
+### Deploy with Existing VPC
+
+In `dragen.template.yaml`, define the following:
+
+- `AMI`: ID of the DRAGEN Amazon Machine Image
+- `QSS3BucketName`: S3 bucket hosting Quick Start templates
+- `QSS3BucketRegion`: Region where the S3 bucket resides
+- `QSS3KeyPrefix`: Path prefix to template files in the bucket
+- `GenomicsS3Bucket`: Destination S3 bucket for DRAGEN output
+
+## Stack Deployment Instructions
+
+1. Open the AWS Console
+2. Upload this repository to your S3 bucket using the with the following path structure:
+   - `<QSS3BucketName>/<QSS3KeyPrefix>`
+3. Create the `GenomicsS3Bucket` S3 bucket
+4. Choose a deployment option:
+   - **Existing VPC:** Use `dragen.template.yaml`
+   - **New VPC:** Use `dragen-main.template.yaml`
+5. Obtain the Amazon S3 URL of your chosen template
+6. Navigate to the `CloudFormation` service and choose `Create Stack`
+7. Use the above Amazon S3 URL for the template, and then update the following parameters if needed:
+   - Stack name
+   - Availability Zones
+   - Key Pair
+   - Genomics Data S3 Bucket
+   - Quick Start Bucket Name
+   - Quick Start Region
+   - Quick Start Key Prefix
+8. Confirm permissions and required capabilities (IAM, etc.)
+9. Click **Next**, review settings, and then click **Submit** to create the stack
+
+## Post-Deployment Steps
+
+Once the stack is created, verify that the DRAGEN instance is configured properly by launching an EC2 instance from the **Launch Template** and running a **DRAGEN self-test** job.
+
+## Using DRAGEN with Nextflow
+
+To integrate DRAGEN AWS Batch into your Nextflow pipeline:
+
+1. Set up AWS credentials and region in `nextflow.config`:
+
+   ```nextflow
+   aws {
+       region    = 'us-east-1'
+       accessKey = secrets.AWS_ACCESS_KEY
+       secretKey = secrets.AWS_SECRET_KEY
+   }
+   ```
+
+2. Configure the job executor and queue for a profile (e.g., `dragen-on-aws`) and process label (e.g., `dragen`):
+
+   ```nextflow
+   dragen-on-aws {
+       process {
+           withLabel: dragen {
+               executor = 'awsbatch'
+               queue    = '<dragen-queue-name>'
+           }
+       }
+   }
+   ```
+
+3. Specify the container using the DRAGEN job definition and revision number:
+
+   > [!INFO]
+   > Use the following format: `job-definition://<job-definition-name>:<revision-number>`
+
+   Example:
+
+   ```nextflow
+   container 'job-definition://dragen_<dragen version>:1'
+   ```
