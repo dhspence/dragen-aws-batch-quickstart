@@ -12,7 +12,7 @@ general:
     us-gov-west-1: us-govcloud-profile
 project:
   s3_regional_buckets: true
-  s3_bucket: dragen-aws-quickstart-test
+  s3_bucket: dragen-aws-quickstart
   regions:
     - af-south-1
     - ap-east-1
