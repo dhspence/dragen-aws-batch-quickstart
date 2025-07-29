@@ -83,10 +83,9 @@ Parameters:
     Type: List<AWS::EC2::AvailabilityZone::Name>
   InstanceType:
     AllowedValues:
-    - f1.2xlarge
-    - f1.4xlarge
-    - f1.16xlarge
-    Default: f1.4xlarge
+    - f2.6xlarge
+    - f2.12xlarge
+    Default: f2.6xlarge
     Description: Amazon EC2 instance type for DRAGEN in the AWS Batch Compute Environment.
     Type: String
   KeyPairName:
@@ -128,7 +127,6 @@ Parameters:
     ConstraintDescription: Quick Start bucket name can include numbers, lowercase
       letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen
       (-).
-    Default: aws-ia
     Description: S3 bucket name for the Quick Start assets. Quick Start bucket name
       can include numbers, lowercase letters, uppercase letters, and hyphens (-).
       It cannot start or end with a hyphen (-).
@@ -144,7 +142,7 @@ Parameters:
     Description: S3 key prefix for the Quick Start assets. Quick Start key prefix
       can include numbers, lowercase letters, uppercase letters, hyphens (-), and
       forward slash (/).
-    Default: cfn-ps-illumina-dragen/
+    Default: prefix-to-template/
     Type: String
   BidPercentage:
     AllowedPattern: (?:\b|-)([1-9]{1,2}[0]?|100)\b
@@ -190,8 +188,7 @@ Rules:
         Fn::Contains:
         - - us-east-1
           - us-west-2
-          - eu-central-1
-          - eu-west-1
+          - eu-west-2
           - ap-southeast-2
         - !Ref AWS::Region
       AssertDescription: This Quick Start utilizes DRAGEN Marketplace AMI which is only available
