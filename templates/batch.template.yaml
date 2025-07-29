@@ -476,12 +476,6 @@ Resources:
             ReadOnly: False
             SourceVolume: docker_var_log
         Volumes:
-          - Name: docker_scratch
-            Host:
-              SourcePath: "/scratch"
-          - Name: docker_ephemeral
-            Host:
-              SourcePath: "/ephemeral"
           - Name: docker_opt_edico
             Host:
               SourcePath: "/opt/edico"
