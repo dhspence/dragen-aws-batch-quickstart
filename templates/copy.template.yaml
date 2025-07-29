@@ -16,7 +16,7 @@ Parameters:
     Description: "Bucket where Lambda artifacts will be copied to"
     Default: ""
 Conditions:
-  UsingDefaultBucket: !Equals [!Ref QSS3BucketName, "dragen-aws-quickstart"]
+  UsingDefaultBucket: !Equals [!Ref QSS3BucketName, "cgl-dragen-quickstart"]
 Resources:
   CopyRole:
     Type: AWS::IAM::Role
@@ -92,12 +92,7 @@ Resources:
                 Resource:
                   - !Sub
                     - arn:${AWS::Partition}:s3:::${S3Bucket}/${QSS3KeyPrefix}*
-                    - S3Bucket:
-                        !If [
-                          UsingDefaultBucket,
-                          !Sub "${QSS3BucketName}-${AWS::Region}",
-                          !Ref QSS3BucketName,
-                        ]
+                    - S3Bucket: !Ref QSS3BucketName
               - Sid: S3Put
                 Effect: Allow
                 Action:
@@ -112,12 +107,7 @@ Resources:
       ServiceToken: !GetAtt CopyZipsFunction.Arn
       DestRegion: !Ref AWS::Region
       DestBucket: !Ref DestinationBucket
-      SourceBucket:
-        !If [
-          UsingDefaultBucket,
-          !Sub "${QSS3BucketName}-${AWS::Region}",
-          !Ref QSS3BucketName,
-        ]
+      SourceBucket: !Ref QSS3BucketName
       Prefix: !Ref QSS3KeyPrefix
       Objects:
         - "app/packages/dragen/dragen.zip"
