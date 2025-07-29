@@ -102,15 +102,14 @@ Parameters:
     ConstraintDescription: Value between 1 and 10
   InstanceType:
     AllowedValues:
-    - f1.2xlarge
-    - f1.4xlarge
-    - f1.16xlarge
+    - f2.6xlarge
+    - f2.12xlarge
     Description: Amazon EC2 instance type for DRAGEN in the AWS Batch Compute Environment.
     Type: String
 
 Conditions:
-  Is2xl: !Equals [!Ref InstanceType, 'f1.2xlarge']
-  Is4xl: !Equals [!Ref InstanceType, 'f1.4xlarge']
+  Is6xl: !Equals [!Ref InstanceType, 'f2.6xlarge']
+  Is12xl: !Equals [!Ref InstanceType, 'f2.12xlarge']
 
 Resources:
   # Batch Setup
@@ -358,8 +357,8 @@ Resources:
         Attempts: !Ref RetryNumber
       ContainerProperties:
         Image: !Ref DragenDockerImage
-        Vcpus: !If [Is2xl, 8, !If [Is4xl, 16, 64]]
-        Memory: !If [Is2xl, 120000, !If [Is4xl, 240000, 800000]]
+        Vcpus: !If [Is6xl, 24, 48]
+        Memory: !If [Is6xl, 240000, 480000]
         JobRoleArn: !GetAtt DragenJobRole.Arn
         MountPoints:
           - ContainerPath: "/scratch"
@@ -374,7 +373,7 @@ Resources:
           - ContainerPath: "/var/lib/edico"
             ReadOnly: False
             SourceVolume: docker_var_lib_edico
-          - ContainerPath: "/usr/lib64/libdragen.so.4.3.6"
+          - ContainerPath: "/usr/lib64/libdragen.so.4.4.4"
             ReadOnly: False
             SourceVolume: docker_usr_lib64
         Volumes:
@@ -392,7 +391,7 @@ Resources:
               SourcePath: "/var/lib/edico"
           - Name: docker_usr_lib64
             Host:
-              SourcePath: "/usr/lib64/libdragen.so.4.3.6"
+              SourcePath: "/usr/lib64/libdragen.so.4.4.4"
 
 Outputs:
   DragenComputeEnvironmentSpot:
