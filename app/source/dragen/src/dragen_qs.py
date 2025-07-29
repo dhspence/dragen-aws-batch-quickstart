@@ -731,9 +731,6 @@ class DragenJob(object):
 
         # Add some internally defined parameters
         self.new_args.extend(
-            ['--output_status_file', self.output_dir + '/job-speedometer.log']
-        )
-        self.new_args.extend(
             ['--intermediate-results-dir', self.CLOUD_SPILL_FOLDER]
         )
         self.new_args.extend(
