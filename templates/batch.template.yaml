@@ -452,13 +452,14 @@ Resources:
         Memory: !If [Is6xl, 256000, !If [Is12xl, 512000, 512000]]
         JobRoleArn: !GetAtt DragenJobRole.Arn
         Privileged: true
+        Environment:
+          - Name: NXF_CHDIR
+            Value: "/staging"
+          - Name: NXF_SCRATCH
+            Value: "/staging"
+          - Name: TMPDIR
+            Value: "/staging/tmp"
         MountPoints:
-          - ContainerPath: "/scratch"
-            ReadOnly: False
-            SourceVolume: docker_scratch
-          - ContainerPath: "/ephemeral"
-            ReadOnly: False
-            SourceVolume: docker_ephemeral
           - ContainerPath: "/opt/edico"
             ReadOnly: False
             SourceVolume: docker_opt_edico
