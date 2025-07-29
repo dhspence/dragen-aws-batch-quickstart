@@ -370,6 +370,7 @@ Resources:
         Type: SPOT
         LaunchTemplate:
           LaunchTemplateId: !Ref DragenLaunchTemplate
+          Version: !GetAtt DragenLaunchTemplate.LatestVersionNumber
   DragenComputeEnvironmentOnDemand:
     Type: AWS::Batch::ComputeEnvironment
     Properties:
@@ -392,6 +393,7 @@ Resources:
         AllocationStrategy: BEST_FIT_PROGRESSIVE
         LaunchTemplate:
           LaunchTemplateId: !Ref DragenLaunchTemplate
+          Version: !GetAtt DragenLaunchTemplate.LatestVersionNumber
 
   # DRAGEN set up
   DragenJobRole:
