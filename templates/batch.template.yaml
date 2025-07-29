@@ -231,6 +231,31 @@ Resources:
             Tags:
               - Key: "Name"
                 Value: "Dragen"
+        BlockDeviceMappings:
+          - DeviceName: /dev/sdb
+            Ebs:
+              Encrypted: true
+              DeleteOnTermination: true
+              VolumeSize: 1250
+              VolumeType: gp3
+          - DeviceName: /dev/sdc
+            Ebs:
+              Encrypted: true
+              DeleteOnTermination: true
+              VolumeSize: 1250
+              VolumeType: gp3
+          - DeviceName: /dev/sdd
+            Ebs:
+              Encrypted: true
+              DeleteOnTermination: true
+              VolumeSize: 1250
+              VolumeType: gp3
+          - DeviceName: /dev/sde
+            Ebs:
+              Encrypted: true
+              DeleteOnTermination: true
+              VolumeSize: 1250
+              VolumeType: gp3
         UserData: !Base64
           Fn::Sub: |
             Content-Type: multipart/mixed; boundary="==BOUNDARY=="
