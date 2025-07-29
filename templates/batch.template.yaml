@@ -267,56 +267,86 @@ Resources:
 
             #!/bin/bash
 
-            function qs_retry_command() {
-                local -r __tries="$1"; shift
-                local -r __run="$@"
-                local -i __backoff_delay=2
-
-                until $__run
-                    do
-                            if (( __current_try == __tries ))
-                            then
-                                    echo "Tried $__current_try times and failed!"
-                                    return 1
-                            else
-                                    echo "Retrying ...."
-                                    sleep $((((__backoff_delay++)) + ((__current_try++))))
-                            fi
-                    done
-
+            log() {
+                echo "$(date '+%Y-%m-%d %H:%M:%S') - $@"
             }
 
-            echo ECS_DISABLE_IMAGE_CLEANUP=false >> /etc/ecs/ecs.config
-            echo ECS_ENGINE_TASK_CLEANUP_WAIT_DURATION=2m >> /etc/ecs/ecs.config
-            echo ECS_IMAGE_CLEANUP_INTERVAL=10m >> /etc/ecs/ecs.config
-            echo ECS_IMAGE_MINIMUM_CLEANUP_AGE=10m >> /etc/ecs/ecs.config
-            echo ECS_NUM_IMAGES_DELETE_PER_CYCLE=5 >> /etc/ecs/ecs.config
-            echo ECS_RESERVED_MEMORY=32 >> /etc/ecs/ecs.config
-            echo ECS_AVAILABLE_LOGGING_DRIVERS='["json-file","awslogs"]' >> /etc/ecs/ecs.config
+            qs_retry() {
+                local retries=$1
+                shift
+                local command="$*"
+                local current_try=0
+                local backoff_delay=2
+                while (( current_try < retries )); do
+                    if eval "$command"; then
+                        return 0
+                    fi
+                    log "Retrying... (Attempt $((current_try + 1))/$retries)"
+                    sleep $((backoff_delay++))
+                    ((current_try++))
+                done
+                log "ERROR: Tried $retries times and failed!"
+                return 1
+            }
 
-            qs_retry_command 10 yum downgrade -y \
-                docker-ce-25.0.5-1.el8 \
-                docker-ce-cli-25.0.5-1.el8 \
-                docker-ce-rootless-extras-25.0.5-1.el8
+            RAID_DEVICES=(/dev/nvme1n1 /dev/nvme2n1 /dev/nvme3n1 /dev/nvme4n1)
+            RAID_NAME="/dev/md0"
+            MOUNT_POINT="/staging"
 
-            qs_retry_command 10 systemctl restart docker
-            qs_retry_command 10 docker stop ecs-agent
-            qs_retry_command 10 docker rm ecs-agent
-            qs_retry_command 10 docker pull amazon/amazon-ecs-agent:latest
+            LOG_FILE="configure-raid.log"
+            exec > >(tee -a "${LOG_FILE}") 2> >(tee -a "${LOG_FILE}" >&2)
 
-            qs_retry_command 10 docker run \
-                --name ecs-agent \
-                --detach=true \
-                --restart=on-failure:10 \
-                --volume=/var/run:/var/run \
-                --volume=/var/log/ecs/:/log \
-                --volume=/var/lib/ecs/data:/data \
-                --volume=/etc/ecs:/etc/ecs \
-                --net=host \
-                --env-file=/etc/ecs/ecs.config \
-                amazon/amazon-ecs-agent:latest
+            log "Stopping ECS agent..."
+            qs_retry 10 sudo systemctl stop ecs
+
+            log "Waiting for NVMe devices..."
+            for dev in "${RAID_DEVICES[@]}"; do
+                qs_retry 10 "[ -e ${dev} ]" || true
+            done
+
+            if [ ! -e "${RAID_NAME}" ]; then
+                log "Creating RAID0 array..."
+                qs_retry 10 sudo mdadm --create "${RAID_NAME}" --level=0 --raid-devices="${#RAID_DEVICES[@]}" "${RAID_DEVICES[@]}" --force
+                
+                log "Initializing RAID0 array..."
+                qs_retry 10 "sudo mkfs.ext4 -F ${RAID_NAME}"
+            fi
+
+            log "Updating fstab..."
+            UUID="$(sudo blkid -s UUID -o value ${RAID_NAME})"
+            qs_retry 10 "echo UUID=${UUID} ${MOUNT_POINT} ext4 defaults,noatime 0 0 | sudo tee -a /etc/fstab"
+
+            log "Mounting RAID0 array..."
+            qs_retry 10 "sudo mkdir -p ${MOUNT_POINT}"
+            qs_retry 10 "sudo mount -a"
+            qs_retry 10 sudo mdadm --detail --scan | sudo tee -a /etc/mdadm.conf
+            qs_retry 10 "sudo mkdir -p ${MOUNT_POINT}/tmp ${MOUNT_POINT}/intermediate-results-dir"
+            qs_retry 10 "sudo chmod -R 777 ${MOUNT_POINT}"
+
+            log "Setting up Docker..."
+            qs_retry 10 "sudo groupadd -f docker"
+            qs_retry 10 "sudo usermod -aG docker $(id -un)"
+            qs_retry 10 "newgrp docker"
+
+            qs_retry 10 "sudo chown root:docker /var/run/docker.sock"
+            qs_retry 10 "sudo chmod 660 /var/run/docker.sock"
+            qs_retry 10 "sudo chown -R root:docker /var/lib/docker"
+            qs_retry 10 "sudo chmod -R 775 /var/lib/docker"
+
+            qs_retry 10 "sudo systemctl enable docker"
+            qs_retry 10 "sudo systemctl start docker"
+
+            log "Moving log file..."
+            qs_retry 10 "sudo mv ${LOG_FILE} ${MOUNT_POINT}/${LOG_FILE}"
+
+            log "Changing directory to ${MOUNT_POINT}..."
+            qs_retry 10 "cd ${MOUNT_POINT}"
+
+            qs_retry 10 "sudo systemctl start ecs"
+            log "ECS and RAID0 array are ready."
 
             --==BOUNDARY==--
+
   DragenComputeEnvironmentSpot:
     Type: AWS::Batch::ComputeEnvironment
     Properties:
