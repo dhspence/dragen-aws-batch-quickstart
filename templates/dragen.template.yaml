@@ -159,7 +159,7 @@ Parameters:
     AllowedPattern: ^(0|[1-9][0-9]{0,2}|1000)$
     ConstraintDescription: Valid between 0 and 1000, inclusive
     Description: Maximum vCPUs for your AWS Batch Compute Environment
-    Default: 128
+    Default: 256
     Type: String
   DesiredvCpus:
     AllowedPattern: ^(0|[1-9][0-9]{0,2}|1000)$

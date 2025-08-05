@@ -95,7 +95,7 @@ Parameters:
   MaxvCpus:
     Type: String
     Description: Maximum number of CPUs in the compute environment. Should be >= than MinCpus
-    Default: 128
+    Default: 256
     AllowedPattern: "[0-9]+"
   RetryNumber:
     Type: String
