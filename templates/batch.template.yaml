@@ -121,6 +121,11 @@ Parameters:
     Default: "/usr/lib64/libdragen.so.4.3.6f"
     Description: The name of the DRAGEN shared object file to be used in the AWS Batch Compute Environment.
     ConstraintDescription: The shared object file is typically in the following path /usr/lib64/libdragen.so.X-Y-Z, where X, Y, and Z are integers.
+  DragenDevicePath:
+    Type: String
+    Default: "/dev/sda1"
+    Description: The path to the DRAGEN device to be used in the AWS Batch Compute Environment.
+    ConstraintDescription: The device path is typically listed in the AMI manifest.
 
 Conditions:
   Is6xl: !Equals [!Ref InstanceType, "f2.6xlarge"]
@@ -491,6 +496,13 @@ Resources:
           - Name: docker_var_log
             Host:
               SourcePath: "/var/log"
+        LinuxParameters:
+          Devices:
+            - HostPath: !Ref DragenDevicePath
+              ContainerPath: !Ref DragenDevicePath
+              Permissions:
+                - READ
+                - WRITE
 
 Outputs:
   DragenComputeEnvironmentSpot:
