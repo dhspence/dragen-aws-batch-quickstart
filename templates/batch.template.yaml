@@ -85,23 +85,23 @@ Parameters:
   MinvCpus:
     Type: String
     Description: Minimum number of CPUs in the compute environment. Default 0.
-    Default: 0
+    Default: "0"
     AllowedPattern: "[0-9]+"
   DesiredvCpus:
     Type: String
     Description: Desired number of CPUs in the compute environment to launch with. Default 0.
-    Default: 0
+    Default: "0"
     AllowedPattern: "[0-9]+"
   MaxvCpus:
     Type: String
     Description: Maximum number of CPUs in the compute environment. Should be >= than MinCpus
-    Default: 256
+    Default: "256"
     AllowedPattern: "[0-9]+"
   RetryNumber:
     Type: String
     Default: "3"
     Description: Number of retries for each AWS Batch job. Integer required.
-    MaxLength: 1
+    MaxLength: "1"
     AllowedPattern: (?:\b|-)([1-9]|10)\b
     ConstraintDescription: Value between 1 and 10
   InstanceType:
@@ -236,6 +236,32 @@ Resources:
             Tags:
               - Key: "Name"
                 Value: "Dragen"
+              - Key: "pipelineBatch"
+                Value: ""
+              - Key: "pipelineContainer"
+                Value: ""
+              - Key: "pipelineCPUs"
+                Value: ""
+              - Key: "pipelineMemory"
+                Value: ""
+              - Key: "pipelineName"
+                Value: ""
+              - Key: "pipelineProcess"
+                Value: ""
+              - Key: "pipelineRepository"
+                Value: ""
+              - Key: "pipelineRevision"
+                Value: ""
+              - Key: "pipelineRunName"
+                Value: ""
+              - Key: "pipelineSessionId"
+                Value: ""
+              - Key: "pipelineTag"
+                Value: ""
+              - Key: "pipelineTaskAttempt"
+                Value: ""
+              - Key: "pipelineUser"
+                Value: ""
         BlockDeviceMappings:
           - DeviceName: /dev/sdb
             Ebs:
@@ -261,10 +287,10 @@ Resources:
               DeleteOnTermination: true
               VolumeSize: 1250
               VolumeType: gp3
-        UserData: !Base64
-          Fn::Sub: |
-            Content-Type: multipart/mixed; boundary="==BOUNDARY=="
+        UserData:
+          Fn::Base64: |
             MIME-Version: 1.0
+            Content-Type: multipart/mixed; boundary="==BOUNDARY=="
 
             --==BOUNDARY==
             MIME-Version: 1.0
@@ -272,11 +298,11 @@ Resources:
 
             #!/bin/bash
 
-            log() {
+            function log() {
                 echo "$(date '+%Y-%m-%d %H:%M:%S') - $@"
             }
 
-            qs_retry() {
+            function qs_retry() {
                 local retries=$1
                 shift
                 local command="$*"
@@ -306,13 +332,13 @@ Resources:
 
             log "Waiting for NVMe devices..."
             for dev in "${RAID_DEVICES[@]}"; do
-                qs_retry 10 "[ -e ${dev} ]" || true
+                qs_retry 10 "[ -e $dev ]" || true
             done
 
             if [ ! -e "${RAID_NAME}" ]; then
                 log "Creating RAID0 array..."
                 qs_retry 10 sudo mdadm --create "${RAID_NAME}" --level=0 --raid-devices="${#RAID_DEVICES[@]}" "${RAID_DEVICES[@]}" --force
-                
+
                 log "Initializing RAID0 array..."
                 qs_retry 10 "sudo mkfs.ext4 -F ${RAID_NAME}"
             fi
@@ -351,7 +377,7 @@ Resources:
             log "ECS and RAID0 array are ready."
 
             --==BOUNDARY==--
-
+      
   DragenComputeEnvironmentSpot:
     Type: AWS::Batch::ComputeEnvironment
     Properties:
@@ -376,6 +402,21 @@ Resources:
         LaunchTemplate:
           LaunchTemplateId: !Ref DragenLaunchTemplate
           Version: !GetAtt DragenLaunchTemplate.LatestVersionNumber
+      Tags:
+        Name: "Dragen"
+        pipelineBatch: ""
+        pipelineContainer: ""
+        pipelineCPUs: ""
+        pipelineMemory: ""
+        pipelineName: ""
+        pipelineProcess: ""
+        pipelineRepository: ""
+        pipelineRevision: ""
+        pipelineRunName: ""
+        pipelineSessionId: ""
+        pipelineTag: ""
+        pipelineTaskAttempt: ""
+        pipelineUser: ""
   DragenComputeEnvironmentOnDemand:
     Type: AWS::Batch::ComputeEnvironment
     Properties:
@@ -399,6 +440,21 @@ Resources:
         LaunchTemplate:
           LaunchTemplateId: !Ref DragenLaunchTemplate
           Version: !GetAtt DragenLaunchTemplate.LatestVersionNumber
+      Tags:
+        Name: "Dragen"
+        pipelineBatch: ""
+        pipelineContainer: ""
+        pipelineCPUs: ""
+        pipelineMemory: ""
+        pipelineName: ""
+        pipelineProcess: ""
+        pipelineRepository: ""
+        pipelineRevision: ""
+        pipelineRunName: ""
+        pipelineSessionId: ""
+        pipelineTag: ""
+        pipelineTaskAttempt: ""
+        pipelineUser: ""
 
   # DRAGEN set up
   DragenJobRole:
@@ -444,6 +500,21 @@ Resources:
           ComputeEnvironment: !Ref DragenComputeEnvironmentOnDemand
         - Order: 2
           ComputeEnvironment: !Ref DragenComputeEnvironmentSpot
+      Tags:
+        Name: "Dragen"
+        pipelineBatch: ""
+        pipelineContainer: ""
+        pipelineCPUs: ""
+        pipelineMemory: ""
+        pipelineName: ""
+        pipelineProcess: ""
+        pipelineRepository: ""
+        pipelineRevision: ""
+        pipelineRunName: ""
+        pipelineSessionId: ""
+        pipelineTag: ""
+        pipelineTaskAttempt: ""
+        pipelineUser: ""
   DragenJobDefinition:
     Type: AWS::Batch::JobDefinition
     Properties:
@@ -503,6 +574,21 @@ Resources:
               Permissions:
                 - READ
                 - WRITE
+      Tags:
+        Name: "Dragen"
+        pipelineBatch: ""
+        pipelineContainer: ""
+        pipelineCPUs: ""
+        pipelineMemory: ""
+        pipelineName: ""
+        pipelineProcess: ""
+        pipelineRepository: ""
+        pipelineRevision: ""
+        pipelineRunName: ""
+        pipelineSessionId: ""
+        pipelineTag: ""
+        pipelineTaskAttempt: ""
+        pipelineUser: ""
 
 Outputs:
   DragenComputeEnvironmentSpot:
