@@ -85,23 +85,23 @@ Parameters:
   MinvCpus:
     Type: String
     Description: Minimum number of CPUs in the compute environment. Default 0.
-    Default: 0
+    Default: "0"
     AllowedPattern: "[0-9]+"
   DesiredvCpus:
     Type: String
     Description: Desired number of CPUs in the compute environment to launch with. Default 0.
-    Default: 0
+    Default: "0"
     AllowedPattern: "[0-9]+"
   MaxvCpus:
     Type: String
     Description: Maximum number of CPUs in the compute environment. Should be >= than MinCpus
-    Default: 128
+    Default: "256"
     AllowedPattern: "[0-9]+"
   RetryNumber:
     Type: String
     Default: "3"
     Description: Number of retries for each AWS Batch job. Integer required.
-    MaxLength: 1
+    MaxLength: "1"
     AllowedPattern: (?:\b|-)([1-9]|10)\b
     ConstraintDescription: Value between 1 and 10
   InstanceType:
@@ -121,6 +121,11 @@ Parameters:
     Default: "/usr/lib64/libdragen.so.4.3.6f"
     Description: The name of the DRAGEN shared object file to be used in the AWS Batch Compute Environment.
     ConstraintDescription: The shared object file is typically in the following path /usr/lib64/libdragen.so.X-Y-Z, where X, Y, and Z are integers.
+  DragenDevicePath:
+    Type: String
+    Default: "/dev/sda1"
+    Description: The path to the DRAGEN device to be used in the AWS Batch Compute Environment.
+    ConstraintDescription: The device path is typically listed in the AMI manifest.
 
 Conditions:
   Is6xl: !Equals [!Ref InstanceType, "f2.6xlarge"]
@@ -231,10 +236,61 @@ Resources:
             Tags:
               - Key: "Name"
                 Value: "Dragen"
-        UserData: !Base64
-          Fn::Sub: |
-            Content-Type: multipart/mixed; boundary="==BOUNDARY=="
+              - Key: "pipelineBatch"
+                Value: ""
+              - Key: "pipelineContainer"
+                Value: ""
+              - Key: "pipelineCPUs"
+                Value: ""
+              - Key: "pipelineMemory"
+                Value: ""
+              - Key: "pipelineName"
+                Value: ""
+              - Key: "pipelineProcess"
+                Value: ""
+              - Key: "pipelineRepository"
+                Value: ""
+              - Key: "pipelineRevision"
+                Value: ""
+              - Key: "pipelineRunName"
+                Value: ""
+              - Key: "pipelineSessionId"
+                Value: ""
+              - Key: "pipelineTag"
+                Value: ""
+              - Key: "pipelineTaskAttempt"
+                Value: ""
+              - Key: "pipelineUser"
+                Value: ""
+        BlockDeviceMappings:
+          - DeviceName: /dev/sdb
+            Ebs:
+              Encrypted: true
+              DeleteOnTermination: true
+              VolumeSize: 1250
+              VolumeType: gp3
+          - DeviceName: /dev/sdc
+            Ebs:
+              Encrypted: true
+              DeleteOnTermination: true
+              VolumeSize: 1250
+              VolumeType: gp3
+          - DeviceName: /dev/sdd
+            Ebs:
+              Encrypted: true
+              DeleteOnTermination: true
+              VolumeSize: 1250
+              VolumeType: gp3
+          - DeviceName: /dev/sde
+            Ebs:
+              Encrypted: true
+              DeleteOnTermination: true
+              VolumeSize: 1250
+              VolumeType: gp3
+        UserData:
+          Fn::Base64: |
             MIME-Version: 1.0
+            Content-Type: multipart/mixed; boundary="==BOUNDARY=="
 
             --==BOUNDARY==
             MIME-Version: 1.0
@@ -242,56 +298,86 @@ Resources:
 
             #!/bin/bash
 
-            function qs_retry_command() {
-                local -r __tries="$1"; shift
-                local -r __run="$@"
-                local -i __backoff_delay=2
-
-                until $__run
-                    do
-                            if (( __current_try == __tries ))
-                            then
-                                    echo "Tried $__current_try times and failed!"
-                                    return 1
-                            else
-                                    echo "Retrying ...."
-                                    sleep $((((__backoff_delay++)) + ((__current_try++))))
-                            fi
-                    done
-
+            function log() {
+                echo "$(date '+%Y-%m-%d %H:%M:%S') - $@"
             }
 
-            echo ECS_DISABLE_IMAGE_CLEANUP=false >> /etc/ecs/ecs.config
-            echo ECS_ENGINE_TASK_CLEANUP_WAIT_DURATION=2m >> /etc/ecs/ecs.config
-            echo ECS_IMAGE_CLEANUP_INTERVAL=10m >> /etc/ecs/ecs.config
-            echo ECS_IMAGE_MINIMUM_CLEANUP_AGE=10m >> /etc/ecs/ecs.config
-            echo ECS_NUM_IMAGES_DELETE_PER_CYCLE=5 >> /etc/ecs/ecs.config
-            echo ECS_RESERVED_MEMORY=32 >> /etc/ecs/ecs.config
-            echo ECS_AVAILABLE_LOGGING_DRIVERS='["json-file","awslogs"]' >> /etc/ecs/ecs.config
+            function qs_retry() {
+                local retries=$1
+                shift
+                local command="$*"
+                local current_try=0
+                local backoff_delay=2
+                while (( current_try < retries )); do
+                    if eval "$command"; then
+                        return 0
+                    fi
+                    log "Retrying... (Attempt $((current_try + 1))/$retries)"
+                    sleep $((backoff_delay++))
+                    ((current_try++))
+                done
+                log "ERROR: Tried $retries times and failed!"
+                return 1
+            }
 
-            qs_retry_command 10 yum downgrade -y \
-                docker-ce-25.0.5-1.el8 \
-                docker-ce-cli-25.0.5-1.el8 \
-                docker-ce-rootless-extras-25.0.5-1.el8
+            RAID_DEVICES=(/dev/nvme1n1 /dev/nvme2n1 /dev/nvme3n1 /dev/nvme4n1)
+            RAID_NAME="/dev/md0"
+            MOUNT_POINT="/staging"
 
-            qs_retry_command 10 systemctl restart docker
-            qs_retry_command 10 docker stop ecs-agent
-            qs_retry_command 10 docker rm ecs-agent
-            qs_retry_command 10 docker pull amazon/amazon-ecs-agent:latest
+            LOG_FILE="configure-raid.log"
+            exec > >(tee -a "${LOG_FILE}") 2> >(tee -a "${LOG_FILE}" >&2)
 
-            qs_retry_command 10 docker run \
-                --name ecs-agent \
-                --detach=true \
-                --restart=on-failure:10 \
-                --volume=/var/run:/var/run \
-                --volume=/var/log/ecs/:/log \
-                --volume=/var/lib/ecs/data:/data \
-                --volume=/etc/ecs:/etc/ecs \
-                --net=host \
-                --env-file=/etc/ecs/ecs.config \
-                amazon/amazon-ecs-agent:latest
+            log "Stopping ECS agent..."
+            qs_retry 10 sudo systemctl stop ecs
+
+            log "Waiting for NVMe devices..."
+            for dev in "${RAID_DEVICES[@]}"; do
+                qs_retry 10 "[ -e $dev ]" || true
+            done
+
+            if [ ! -e "${RAID_NAME}" ]; then
+                log "Creating RAID0 array..."
+                qs_retry 10 sudo mdadm --create "${RAID_NAME}" --level=0 --raid-devices="${#RAID_DEVICES[@]}" "${RAID_DEVICES[@]}" --force
+
+                log "Initializing RAID0 array..."
+                qs_retry 10 "sudo mkfs.ext4 -F ${RAID_NAME}"
+            fi
+
+            log "Updating fstab..."
+            UUID="$(sudo blkid -s UUID -o value ${RAID_NAME})"
+            qs_retry 10 "echo UUID=${UUID} ${MOUNT_POINT} ext4 defaults,noatime 0 0 | sudo tee -a /etc/fstab"
+
+            log "Mounting RAID0 array..."
+            qs_retry 10 "sudo mkdir -p ${MOUNT_POINT}"
+            qs_retry 10 "sudo mount -a"
+            qs_retry 10 sudo mdadm --detail --scan | sudo tee -a /etc/mdadm.conf
+            qs_retry 10 "sudo mkdir -p ${MOUNT_POINT}/tmp ${MOUNT_POINT}/intermediate-results-dir"
+            qs_retry 10 "sudo chmod -R 777 ${MOUNT_POINT}"
+
+            log "Setting up Docker..."
+            qs_retry 10 "sudo groupadd -f docker"
+            qs_retry 10 "sudo usermod -aG docker $(id -un)"
+            qs_retry 10 "newgrp docker"
+
+            qs_retry 10 "sudo chown root:docker /var/run/docker.sock"
+            qs_retry 10 "sudo chmod 660 /var/run/docker.sock"
+            qs_retry 10 "sudo chown -R root:docker /var/lib/docker"
+            qs_retry 10 "sudo chmod -R 775 /var/lib/docker"
+
+            qs_retry 10 "sudo systemctl enable docker"
+            qs_retry 10 "sudo systemctl start docker"
+
+            log "Moving log file..."
+            qs_retry 10 "sudo mv ${LOG_FILE} ${MOUNT_POINT}/${LOG_FILE}"
+
+            log "Changing directory to ${MOUNT_POINT}..."
+            qs_retry 10 "cd ${MOUNT_POINT}"
+
+            qs_retry 10 "sudo systemctl start ecs"
+            log "ECS and RAID0 array are ready."
 
             --==BOUNDARY==--
+      
   DragenComputeEnvironmentSpot:
     Type: AWS::Batch::ComputeEnvironment
     Properties:
@@ -315,6 +401,22 @@ Resources:
         Type: SPOT
         LaunchTemplate:
           LaunchTemplateId: !Ref DragenLaunchTemplate
+          Version: !GetAtt DragenLaunchTemplate.LatestVersionNumber
+      Tags:
+        Name: "Dragen"
+        pipelineBatch: ""
+        pipelineContainer: ""
+        pipelineCPUs: ""
+        pipelineMemory: ""
+        pipelineName: ""
+        pipelineProcess: ""
+        pipelineRepository: ""
+        pipelineRevision: ""
+        pipelineRunName: ""
+        pipelineSessionId: ""
+        pipelineTag: ""
+        pipelineTaskAttempt: ""
+        pipelineUser: ""
   DragenComputeEnvironmentOnDemand:
     Type: AWS::Batch::ComputeEnvironment
     Properties:
@@ -337,6 +439,22 @@ Resources:
         AllocationStrategy: BEST_FIT_PROGRESSIVE
         LaunchTemplate:
           LaunchTemplateId: !Ref DragenLaunchTemplate
+          Version: !GetAtt DragenLaunchTemplate.LatestVersionNumber
+      Tags:
+        Name: "Dragen"
+        pipelineBatch: ""
+        pipelineContainer: ""
+        pipelineCPUs: ""
+        pipelineMemory: ""
+        pipelineName: ""
+        pipelineProcess: ""
+        pipelineRepository: ""
+        pipelineRevision: ""
+        pipelineRunName: ""
+        pipelineSessionId: ""
+        pipelineTag: ""
+        pipelineTaskAttempt: ""
+        pipelineUser: ""
 
   # DRAGEN set up
   DragenJobRole:
@@ -382,6 +500,21 @@ Resources:
           ComputeEnvironment: !Ref DragenComputeEnvironmentOnDemand
         - Order: 2
           ComputeEnvironment: !Ref DragenComputeEnvironmentSpot
+      Tags:
+        Name: "Dragen"
+        pipelineBatch: ""
+        pipelineContainer: ""
+        pipelineCPUs: ""
+        pipelineMemory: ""
+        pipelineName: ""
+        pipelineProcess: ""
+        pipelineRepository: ""
+        pipelineRevision: ""
+        pipelineRunName: ""
+        pipelineSessionId: ""
+        pipelineTag: ""
+        pipelineTaskAttempt: ""
+        pipelineUser: ""
   DragenJobDefinition:
     Type: AWS::Batch::JobDefinition
     Properties:
@@ -395,13 +528,14 @@ Resources:
         Memory: !If [Is6xl, 256000, !If [Is12xl, 512000, 512000]]
         JobRoleArn: !GetAtt DragenJobRole.Arn
         Privileged: true
+        Environment:
+          - Name: NXF_CHDIR
+            Value: "/staging"
+          - Name: NXF_SCRATCH
+            Value: "/staging"
+          - Name: TMPDIR
+            Value: "/staging/tmp"
         MountPoints:
-          - ContainerPath: "/scratch"
-            ReadOnly: False
-            SourceVolume: docker_scratch
-          - ContainerPath: "/ephemeral"
-            ReadOnly: False
-            SourceVolume: docker_ephemeral
           - ContainerPath: "/opt/edico"
             ReadOnly: False
             SourceVolume: docker_opt_edico
@@ -418,12 +552,6 @@ Resources:
             ReadOnly: False
             SourceVolume: docker_var_log
         Volumes:
-          - Name: docker_scratch
-            Host:
-              SourcePath: "/scratch"
-          - Name: docker_ephemeral
-            Host:
-              SourcePath: "/ephemeral"
           - Name: docker_opt_edico
             Host:
               SourcePath: "/opt/edico"
@@ -439,6 +567,28 @@ Resources:
           - Name: docker_var_log
             Host:
               SourcePath: "/var/log"
+        LinuxParameters:
+          Devices:
+            - HostPath: !Ref DragenDevicePath
+              ContainerPath: !Ref DragenDevicePath
+              Permissions:
+                - READ
+                - WRITE
+      Tags:
+        Name: "Dragen"
+        pipelineBatch: ""
+        pipelineContainer: ""
+        pipelineCPUs: ""
+        pipelineMemory: ""
+        pipelineName: ""
+        pipelineProcess: ""
+        pipelineRepository: ""
+        pipelineRevision: ""
+        pipelineRunName: ""
+        pipelineSessionId: ""
+        pipelineTag: ""
+        pipelineTaskAttempt: ""
+        pipelineUser: ""
 
 Outputs:
   DragenComputeEnvironmentSpot:

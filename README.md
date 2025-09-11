@@ -88,6 +88,9 @@ In `dragen.template.yaml`, define the following:
 
 Once the stack is created, verify that the DRAGEN instance is configured properly by launching an EC2 instance from the **Launch Template** and running a **DRAGEN self-test** job.
 
+> [!WARNING]
+> If you modify the EC2 instance configuration, you must recreate the AWS Batch compute environment for changes to take effect.
+
 ## Using DRAGEN with Nextflow
 
 To integrate DRAGEN AWS Batch into your Nextflow pipeline:

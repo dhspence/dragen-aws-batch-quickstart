@@ -1,16 +1,21 @@
 FROM public.ecr.aws/docker/library/oraclelinux:8
 
+# Enable EPEL and CRB repositories
 RUN rpm -Uvh https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm \
     && /usr/bin/crb enable
 
-RUN dnf update \
+# Install packages including mdadm
+RUN dnf update -y \
     && dnf install -y \
+        awscli \
         bzip2-libs \
         ca-certificates \
         coreutils \
         curl \
+        e2fsprogs \
         gdb \
         ipmitool \
+        mdadm \
         perl \
         python3.12 \
         python3.12-pip \
@@ -22,10 +27,9 @@ RUN dnf update \
         time \
         tree \
         unzip \
-    && dnf clean all \
-    && mkdir -m777 -p /var/log/dragen /var/run/dragen
+        util-linux \
+    && dnf clean all
 
-RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
-    && unzip awscliv2.zip \
-    && rm awscliv2.zip \
-    && ./aws/install
+# Add RAID configuration script - retaining for backup
+COPY configure-raid.sh /usr/local/bin/configure-raid.sh
+RUN chmod +x /usr/local/bin/configure-raid.sh
