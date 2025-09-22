@@ -76,17 +76,17 @@ Metadata:
 Mappings:
   AWSAMIRegionMap:
     AMI:
-      DRAGEN: ami-08a2d0f08d14d4e4e
+      DRAGEN: ami-00aacbb5b54cceeb0
     us-east-1:
-      DRAGEN: ami-08a2d0f08d14d4e4e
+      DRAGEN: ami-00aacbb5b54cceeb0
     us-west-2:
-      DRAGEN: ami-08a2d0f08d14d4e4e
+      DRAGEN: ami-00aacbb5b54cceeb0
     eu-central-1:
-      DRAGEN: ami-08a2d0f08d14d4e4e
+      DRAGEN: ami-00aacbb5b54cceeb0
     eu-west-1:
-      DRAGEN: ami-08a2d0f08d14d4e4e
+      DRAGEN: ami-00aacbb5b54cceeb0
     ap-southeast-2:
-      DRAGEN: ami-08a2d0f08d14d4e4e
+      DRAGEN: ami-00aacbb5b54cceeb0
 
 Parameters:
   InstanceType:
@@ -111,7 +111,7 @@ Parameters:
       Quick Start bucket name can include numbers, lowercase
       letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen
       (-).
-    Default: cgl-dragen-quickstart
+    Default: dhslab-dragen-quickstart
     Description:
       S3 bucket name for the Quick Start assets. Quick Start bucket name
       can include numbers, lowercase letters, uppercase letters, and hyphens (-).
@@ -174,7 +174,7 @@ Parameters:
       letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen
       (-).
     Description: S3 bucket name for the bucket to which you'll read and write genomics data.
-    Default: cgl-dragen-results
+    Default: dhslab-dragen-data
     Type: String
 
 Rules:
