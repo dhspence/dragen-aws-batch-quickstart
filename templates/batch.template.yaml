@@ -26,9 +26,9 @@ Metadata:
           - RetryNumber
     ParameterLabels:
       GenomicsS3Bucket:
-        default: Genomics Data Bucket
+        default: dspencer-dragen-data
       RetryNumber:
-        default: AWS Batch Retry Number
+        default: 1
       DragenDockerImage:
         default: Dragen Docker Image
       VpcId:
@@ -50,7 +50,7 @@ Metadata:
       DesiredvCpus:
         default: Desired vCPUs
       DragenVersion:
-        default: Dragen Version
+        default: 4.3.6
 
 Parameters:
   GenomicsS3Bucket:
