@@ -76,17 +76,17 @@ Metadata:
 Mappings:
   AWSAMIRegionMap:
     AMI:
-      DRAGEN: ami-00aacbb5b54cceeb0
+      DRAGEN: ami-00bae2eb2e988520b
     us-east-1:
-      DRAGEN: ami-00aacbb5b54cceeb0
+      DRAGEN: ami-00bae2eb2e988520b
     us-west-2:
-      DRAGEN: ami-00aacbb5b54cceeb0
+      DRAGEN: ami-00bae2eb2e988520b
     eu-central-1:
-      DRAGEN: ami-00aacbb5b54cceeb0
+      DRAGEN: ami-00bae2eb2e988520b
     eu-west-1:
-      DRAGEN: ami-00aacbb5b54cceeb0
+      DRAGEN: ami-00bae2eb2e988520b
     ap-southeast-2:
-      DRAGEN: ami-00aacbb5b54cceeb0
+      DRAGEN: ami-00bae2eb2e988520b
 
 Parameters:
   InstanceType:
