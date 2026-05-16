@@ -2,19 +2,21 @@
 
 ## Table of Contents
 
-- [Overview](#overview)
-- [Configuration Guidelines](#configuration-guidelines)
-  - [VPC Setup](#vpc-setup)
-  - [Batch Environment Setup](#batch-environment-setup)
-  - [Deploy with New VPC](#deploy-with-new-vpc)
-  - [Deploy with Existing VPC](#deploy-with-existing-vpc)
-- [Stack Deployment Instructions](#stack-deployment-instructions)
-- [Post-Deployment Steps](#post-deployment-steps)
-- [Using DRAGEN with Nextflow](#using-dragen-with-nextflow)
+- [Quick Start Guide: Illumina DRAGEN on AWS Batch](#quick-start-guide-illumina-dragen-on-aws-batch)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
+    - [Key Features](#key-features)
+  - [Configuration Guidelines](#configuration-guidelines)
+    - [VPC Setup](#vpc-setup)
+    - [Batch Environment Setup](#batch-environment-setup)
+    - [Deploy with Existing VPC](#deploy-with-existing-vpc)
+  - [Stack Deployment Instructions](#stack-deployment-instructions)
+  - [Post-Deployment Steps](#post-deployment-steps)
+  - [Using DRAGEN with Nextflow](#using-dragen-with-nextflow)
 
 ## Overview
 
-This guide explains how to deploy the Illumina DRAGEN (Dynamic Read Analysis for GENomics) platform on AWS Batch. DRAGEN provides lightning-fast, accurate analysis of next-generation sequencing (NGS) data using purpose-built hardware acceleration.
+This is the SPENCERLAB guide for deploying the Illumina DRAGEN (Dynamic Read Analysis for GENomics) platform on AWS Batch. 
 
 ### Key Features
 
@@ -25,7 +27,7 @@ This guide explains how to deploy the Illumina DRAGEN (Dynamic Read Analysis for
 
 These options represent baseline recommendations and should be tailored to suit your deployment strategy.
 
-### VPC Setup
+### VPC Setup (Note: do not modify this section)
 
 In `aws-vpc.template.yaml`, define CIDR values and subnet tags:
 
@@ -42,47 +44,39 @@ In `batch.template.yaml`, define these parameters:
 - `MaxvCpus`: Maximum vCPUs for compute environment
 - `RetryNumber`: Retry count per AWS Batch job
 - `DragenVersion`: DRAGEN software version
-- `LibDragenSO`: Path to the DRAGEN shared object (`.so`) file
-
-### Deploy with New VPC
-
-In `dragen-main.template.yaml`, set values for:
-
-- VPC CIDR block
-- Public and private subnets
-- Additional subnets as needed (e.g., `PublicSubnet2CIDR`)
+- `LibDragenSO`: Path to the DRAGEN shared object (`.so`) file (this may need to be identified by launching the AMI and looking for /usr/lib64/libdragen.so.X-Y-Z)
 
 ### Deploy with Existing VPC
 
 In `dragen.template.yaml`, define the following:
 
-- `AMI`: ID of the DRAGEN Amazon Machine Image
-- `QSS3BucketName`: S3 bucket hosting Quick Start templates
+- `AMI`: ID of the DRAGEN Amazon Machine Image (get this by contacting Illumina and having them share the AMI with you.)
+- `QSS3BucketName`: S3 bucket hosting Quick Start templates (For Spencerlab this is: dragen-aws-batch-quickstart)
 - `QSS3BucketRegion`: Region where the S3 bucket resides
-- `QSS3KeyPrefix`: Path prefix to template files in the bucket
-- `GenomicsS3Bucket`: Destination S3 bucket for DRAGEN output
+- `QSS3KeyPrefix`: Path prefix to template files in the bucket (For Spencerlab this is also: dragen-aws-batch-quickstart)
+- `GenomicsS3Bucket`: Destination S3 bucket for DRAGEN output (For Spencer lab this is: dhslab-dragen-data)
 
 ## Stack Deployment Instructions
 
 1. Open the AWS Console
-2. Upload this repository to your S3 bucket using the with the following path structure:
+2. In S3, create `QSS3BucketName` and `GenomicsS3Bucket`.
+3. Upload the entire 'quickstart' repository to your S3 bucket location (from above):
    - `<QSS3BucketName>/<QSS3KeyPrefix>`
-3. Create the `GenomicsS3Bucket` S3 bucket
-4. Choose a deployment option:
-   - **Existing VPC:** Use `dragen.template.yaml`
-   - **New VPC:** Use `dragen-main.template.yaml`
-5. Obtain the Amazon S3 URL of your chosen template
-6. Navigate to the `CloudFormation` service and choose `Create Stack`
-7. Use the above Amazon S3 URL for the template, and then update the following parameters if needed:
+4. Go to CloudFormation and select "Create stack", choose "With new resources (standard)".
+5. In the "Specify template: section, paste in the dragen template (https://`QSS3BucketName`.s3.us-east-1.amazonaws.com/`QSS3BucketName`/templates/dragen.template.yaml) and click `Next`.
+6. Complete the required fields then click next:
    - Stack name
-   - Availability Zones
+   - Network Configuration
+      - VPC ID (select a VPC. If there is already one for Dragen, you can use this one.)
+      - Private Subnet 1 ID (Same as above, you can select a subnet that's already named for Dragen)
+      - Private Subnet 2 ID (Same as above, you can select a subnet that's already named for Dragen)
    - Key Pair
-   - Genomics Data S3 Bucket
-   - Quick Start Bucket Name
-   - Quick Start Region
-   - Quick Start Key Prefix
-8. Confirm permissions and required capabilities (IAM, etc.)
-9. Click **Next**, review settings, and then click **Submit** to create the stack
+   - Genomics Data S3 Bucket (should already be filled)
+   - Quick Start Bucket Name (should already be filled)
+   - Quick Start Region (should already be filled)
+   - Quick Start Key Prefix (should already be filled)
+8. Confirm permissions and required capabilities (IAM, etc.) then click next.
+9. Review settings, and then click **Submit** to create the stack
 
 ## Post-Deployment Steps
 
